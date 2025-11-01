@@ -1,18 +1,18 @@
 import threading
 
-from extras.inpaint_mask import generate_mask_from_image, SAMOptions
-from modules.patch import PatchSettings, patch_settings, patch_all
 import modules.config
+from extras.inpaint_mask import SAMOptions, generate_mask_from_image
+from modules.patch import PatchSettings, patch_all, patch_settings
 
 patch_all()
 
 
 class AsyncTask:
     def __init__(self, args):
-        from modules.flags import Performance, MetadataScheme, ip_list, disabled
-        from modules.util import get_enabled_loras
-        from modules.config import default_max_lora_number
         import args_manager
+        from modules.config import default_max_lora_number
+        from modules.flags import MetadataScheme, Performance, disabled, ip_list
+        from modules.util import get_enabled_loras
 
         self.args = args.copy()
         self.yields = []
@@ -168,38 +168,55 @@ class EarlyReturnException(BaseException):
 def worker():
     global async_tasks
 
-    import os
-    import traceback
+    import copy
     import math
+    import os
+    import random
+    import time
+    import traceback
+
+    import cv2
     import numpy as np
     import torch
-    import time
-    import shared
-    import random
-    import copy
-    import cv2
-    import modules.default_pipeline as pipeline
-    import modules.core as core
-    import modules.flags as flags
-    import modules.patch
-    import ldm_patched.modules.model_management
-    import extras.preprocessors as preprocessors
-    import modules.inpaint_worker as inpaint_worker
-    import modules.constants as constants
-    import extras.ip_adapter as ip_adapter
-    import extras.face_crop
-    import fooocus_version
 
+    import extras.face_crop
+    import extras.ip_adapter as ip_adapter
+    import extras.preprocessors as preprocessors
+    import fooocus_version
+    import ldm_patched.modules.model_management
+    import modules.constants as constants
+    import modules.core as core
+    import modules.default_pipeline as pipeline
+    import modules.flags as flags
+    import modules.inpaint_worker as inpaint_worker
+    import modules.patch
+    import shared
     from extras.censor import default_censor
-    from modules.sdxl_styles import apply_style, get_random_style, fooocus_expansion, apply_arrays, random_style_name
-    from modules.private_logger import log
     from extras.expansion import safe_str
-    from modules.util import (remove_empty_str, HWC3, resize_image, get_image_shape_ceil, set_image_shape_ceil,
-                              get_shape_ceil, resample_image, erode_or_dilate, parse_lora_references_from_prompt,
-                              apply_wildcards, apply_choice)
-    from modules.upscaler import perform_upscale
     from modules.flags import Performance
     from modules.meta_parser import get_metadata_parser
+    from modules.private_logger import log
+    from modules.sdxl_styles import (
+        apply_arrays,
+        apply_style,
+        fooocus_expansion,
+        get_random_style,
+        random_style_name,
+    )
+    from modules.upscaler import perform_upscale
+    from modules.util import (
+        HWC3,
+        apply_choice,
+        apply_wildcards,
+        erode_or_dilate,
+        get_image_shape_ceil,
+        get_shape_ceil,
+        parse_lora_references_from_prompt,
+        remove_empty_str,
+        resample_image,
+        resize_image,
+        set_image_shape_ceil,
+    )
 
     pid = os.getpid()
     print(f'Started worker with PID {pid}')
@@ -676,7 +693,10 @@ def worker():
             task_rng = random.Random(task_seed)  # may bind to inpaint noise in the future
             task_prompt = apply_wildcards(prompt, task_rng, i, async_task.read_wildcards_in_order)
             task_prompt = apply_arrays(task_prompt, i)
-            task_prompt = apply_choice(task_prompt, task_rng)            task_negative_prompt = apply_wildcards(negative_prompt, task_rng, i, async_task.read_wildcards_in_order)
+            task_prompt = apply_choice(task_prompt, task_rng)
+            task_negative_prompt = apply_wildcards(
+                negative_prompt, task_rng, i, async_task.read_wildcards_in_order
+            )
             task_extra_positive_prompts = [apply_wildcards(pmt, task_rng, i, async_task.read_wildcards_in_order) for pmt
                                            in
                                            extra_positive_prompts]
