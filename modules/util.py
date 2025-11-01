@@ -512,15 +512,15 @@ def get_image_size_info(image: np.ndarray, aspect_ratios: list) -> str:
     except Exception as e:
         return f'Error reading image: {e}'
 
-    def apply_choice(prompt: str, rng) -> str:
-        """
-        Replace {choice1|choice2|...} in the prompt with a randomly selected choice using rng.
-        Similar to apply_arrays, but picks randomly instead of sequentially.
-        """
+def apply_choice(prompt: str, rng: random.Random) -> str:
+    """
+    Replace {choice1|choice2|...} in the prompt with a randomly selected choice using rng.
+    Similar to apply_arrays, but picks randomly instead of sequentially.
+    """
 
-        def choice_replacer(match):
-            choices = match.group(1).split("|")
-            return rng.choice(choices)
+    def choice_replacer(match):
+        choices = match.group(1).split("|")
+        return rng.choice(choices)
 
-        # Replace all {choice1|choice2|...} patterns
-        return re.sub(r"\{([^{}]+)\}", choice_replacer, prompt)
+    # Replace all {choice1|choice2|...} patterns
+    return re.sub(r"\{([^{}]+)\}", choice_replacer, prompt)
